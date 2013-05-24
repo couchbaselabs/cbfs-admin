@@ -31,6 +31,8 @@ function pretty_bytes( bytes ) {
 }
 
 function layout_files( path ) {
+	$( '.nav li' ).removeClass( 'active' ).filter( '[data-tab="files"]' ).addClass( 'active' );
+
 	path = path.filter( function ( p ) { return p; } );
 
 	var layout = function( list ) {
@@ -51,7 +53,7 @@ function layout_files( path ) {
 			$.each( this.files, function() {
 				// can't use jQuery here
 				var xhr = new XMLHttpRequest();
-				xhr.open( 'PUT', location.protocol + '//' + location.host + list.path + '/' + this.name, true );
+				xhr.open( 'PUT', list.path + '/' + this.name, true );
 				xhr.onreadystatechange = function() {
 					// give it time to update the index
 					setTimeout(hash_changed, 1000);
@@ -77,29 +79,29 @@ function layout_files( path ) {
 			);
 		}
 		for ( var d in list.dirs ) {
+			var dir = list.dirs[d];
 			$t.append( $( '<tr>' )
 				.append( $( '<th>' )
 					.append( $( '<i>' ).addClass( 'icon-folder-open' ) )
 					.append( ' ' )
 					.append( $( '<a>' ).attr( 'href', '#files' + list.path + '/' + d ).text( d ) ) )
-				.append( $( '<td>' ).text( list.dirs[d].descendants + ( list.dirs[d].descendants == 1 ? ' item' : ' items' ) ) )
-				.append( $( '<td>' ).text( pretty_bytes( list.dirs[d].size ) ) )
+				.append( $( '<td>' ).text( dir.descendants + ( dir.descendants == 1 ? ' item' : ' items' ) ) )
+				.append( $( '<td>' ).text( pretty_bytes( dir.size ) ) )
 				.append( $( '<td>' ) )
 			);
-			// console.log( d, list.dirs[d] );
 		}
 		for ( var f in list.files ) {
-			var d = new Date( list.files[f].modified );
+			var file = list.files[f];
+			var d = new Date( file.modified );
 			$t.append( $( '<tr>' )
 				.append( $( '<th>' )
 					.append( $( '<i>' ).addClass( 'icon-file' ) )
 					.append( ' ' )
 					.append( $( '<a>' ).attr( 'href', list.path + '/' + f.replace( /^index\.html$/, '' ) ).text( f ) ) )
-				.append( $( '<td>' ).text( list.files[f].ctype ) )
-				.append( $( '<td>' ).text( pretty_bytes( list.files[f].length ) ) )
+				.append( $( '<td>' ).text( file.ctype ) )
+				.append( $( '<td>' ).text( pretty_bytes( file.length ) ) )
 				.append( $( '<td>' ).text( d.toDateString() == new Date().toDateString() ? d.toLocaleTimeString() : d.toLocaleDateString() ) )
 			);
-			// console.log( f, list.files[f] );
 		}
 	};
 
@@ -119,33 +121,65 @@ function layout_files( path ) {
 	} );
 }
 
-var hash_changed;
+function layout_control() {
+	$( '.nav li' ).removeClass( 'active' ).filter( '[data-tab="control"]' ).addClass( 'active' );
 
-$(function() {
-	var update_nodes = function() {
-		$.getJSON( '/.cbfs/nodes/', function( nodes ) {
-			var count = 0;
-			for ( var id in nodes )
-				count++;
-			$( '#cbfs-nodes' ).text( count + ' nodes' );
-			// TODO: do something more interesting
-		} );
-	};
+	var nodes, tasks, ready = 0;
 
-	setInterval( update_nodes, 1000 );
-	update_nodes();
-
-	hash_changed = function() {
-		var components = location.hash.replace(/^#/, '').split(/\//g);
-		switch ( components[0] ) {
-		case 'files':
-			layout_files( components.slice( 1 ) );
-			break;
-
-		default:
-			location.hash = '#files';
+	var maybe = function() {
+		if ( ready == 2 ) { // must be the number of requests below
+			$( '#container' ).empty();
+			var $row, i = 0;
+			for ( var n in nodes ) {
+				var node = nodes[n];
+				if ( i % 3 == 0 ) {
+					$row = $( '<div class="row-fluid">' ).appendTo( '#container' );
+				}
+				i++;
+				$( '<div class="span4">' )
+					.append( $( '<h3>' ).text( n ) )
+					.append( node.addr )
+					.append( '<dl>' + (
+						( node.hbage_ms < 300000 ) ?
+						( '<dt>Up</dt><dd class="text-success">' + node.uptime_str + '</dd>' ) :
+						( '<dt>Down</dt><dd class="text-error">' + node.hbage_str + '</dd>' ) ) +
+						'<dt>Free</dt><dd>' + pretty_bytes( node.free ) + '</dd>' +
+						'<dt>Used</dt><dd>' + pretty_bytes( node.used ) + '</dd>' +
+						'</dl>' )
+					.appendTo( $row );
+			}
+			console.log(nodes, tasks);
 		}
 	};
-	$( window ).on( 'hashchange', hash_changed );
-	hash_changed();
-});
+
+	$.getJSON( '/.cbfs/nodes/', function( data ) {
+		nodes = data;
+		ready++;
+		maybe();
+	} )
+	$.getJSON( '/.cbfs/tasks/', function( data ) {
+		tasks = data;
+		ready++;
+		maybe();
+	} );
+}
+
+function hash_changed() {
+	var components = location.hash.replace(/^#/, '').split(/\//g);
+	switch ( components[0] ) {
+	case 'files':
+		layout_files( components.slice( 1 ) );
+		break;
+
+	case 'control':
+		layout_control();
+		break;
+
+	default:
+		location.hash = '#files';
+	}
+};
+
+$( window ).on( 'hashchange', hash_changed );
+hash_changed();
+setInterval( hash_changed, 1000 ); // auto-update
