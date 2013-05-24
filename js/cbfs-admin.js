@@ -30,12 +30,19 @@ function pretty_bytes( bytes ) {
 	return bytes + 'YB';
 }
 
+var last_data = '';
+
 function layout_files( path ) {
 	$( '.nav li' ).removeClass( 'active' ).filter( '[data-tab="files"]' ).addClass( 'active' );
 
 	path = path.filter( function ( p ) { return p; } );
 
 	var layout = function( list ) {
+		var data = JSON.stringify( list );
+		if ( data == last_data )
+			return;
+		last_data = data;
+
 		list.path = list.path.replace( /\/$/, '' );
 		var $t = $( '<table class="table table-hover table-striped">' ).appendTo( $( '#container' ).empty() );
 		var $b = $( '<span class="btn-group">' ).appendTo( $( '<div class="btn-toolbar">' ).prependTo( '#container' ) );
@@ -50,10 +57,28 @@ function layout_files( path ) {
 		} );
 
 		$( '<span class="btn btn-primary" title="Upload">' ).html( '<i class="icon-upload icon-white"></i> <span class="btn-text">Upload</span>' ).append( $( '<input type="file" multiple>' ).change( function() {
+			var usedNames = {};
 			$.each( this.files, function() {
 				// can't use jQuery here
 				var xhr = new XMLHttpRequest();
-				xhr.open( 'PUT', list.path + '/' + this.name, true );
+				// Don't allow files uploaded in the same batch to override each other
+				var name = this.name;
+				var n = 0;
+				while ( name in usedNames ) {
+					n++;
+					name = this.name + '_' + n;
+					if ( !( name in usedNames ) && ( name in list.files ) ) {
+						if ( !confirm( 'Overwrite file "' + name + '"?' ) ) {
+							// Don't spam the question if the answer is no.
+							for ( var f in list.files ) {
+								usedNames[f] = true;
+							}
+						}
+					}
+				}
+				usedNames[name] = true;
+				xhr.open( 'PUT', list.path + '/' + name, true );
+				xhr.onreadystatechange = update;
 				xhr.send( this );
 			} );
 
@@ -64,7 +89,9 @@ function layout_files( path ) {
 		} ).appendTo( $b );
 
 		$( '<span class="btn" title="New Folder">' ).html( '<i class="icon-folder-open"></i> <span class="btn-text">New Folder</span>' ).click( function() {
-				location.hash = '#files' + list.path + '/' + prompt( 'Folder name?', 'New Folder' );
+			var name = prompt( 'Folder name?', 'New Folder' );
+			if ( name !== null )
+				location.hash = '#files' + list.path + '/' + name;
 		} ).appendTo( $b );
 
 		if ( list.path != '' ) {
@@ -109,7 +136,9 @@ function layout_files( path ) {
 							if ( confirm( 'Permanently delete "' + list.path + '/' + f + '"?' ) ) {
 								$.ajax( {
 									'type': 'DELETE',
-									'url':  list.path + '/' + f
+									'url':  list.path + '/' + f,
+									'success': update,
+									'error': update,
 								} );
 							}
 						};
@@ -141,6 +170,11 @@ function layout_control() {
 
 	var maybe = function() {
 		if ( ready == 2 ) { // must be the number of requests below
+			var data = JSON.stringify( { nodes: nodes, tasks: tasks } );
+			if ( data == last_data )
+				return;
+			last_data = data;
+
 			$( '#container' ).empty();
 			var $row, i = 0;
 			for ( var n in nodes ) {
@@ -178,6 +212,11 @@ function layout_control() {
 }
 
 function hash_changed() {
+	// I might put something in here in the future.
+	update();
+}
+
+function update() {
 	var components = location.hash.replace(/^#/, '').split(/\//g);
 	switch ( components[0] ) {
 	case 'files':
@@ -194,5 +233,6 @@ function hash_changed() {
 };
 
 $( window ).on( 'hashchange', hash_changed );
+$( '.nav a' ).click( hash_changed );
 hash_changed();
-setInterval( hash_changed, 1000 ); // auto-update
+setInterval( update, 1000 );
