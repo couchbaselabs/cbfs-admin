@@ -1,106 +1,55 @@
 <!DOCTYPE html>
 <html lang="en">
-<head>
-<meta charset="utf-8">
-<title>cbfs - admin</title>
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<meta name="description" content="">
-<meta name="author" content="">
-
-
-<link href="css/bootstrap.css" rel="stylesheet">
-<link href="css/bootstrap-responsive.css" rel="stylesheet">
-<link href="css/cbfs.css" rel="stylesheet">
-<link href="css/flexigrid.css" rel="stylesheet">
-
-<!--[if lt IE 9]>
-      <script src="http://html5shim.googlecode.com/svn/trunk/html5.js"></script>
-<![endif]-->
-
-</head>
-
-<body>
-
-	<div class="navbar navbar-inverse navbar-fixed-top">
-		<div class="navbar-inner">
-			<div class="container-fluid">
-				<a class="btn btn-navbar" data-toggle="collapse"
-					data-target=".nav-collapse"> <span class="icon-bar"></span> <span
-					class="icon-bar"></span> <span class="icon-bar"></span>
-				</a> <a class="brand" href="#">cbfs</a>
-				<div class="nav-collapse collapse">
-					<ul class="nav">
-						<li class="active"><a href="#">Files</a></li>
-						<li><a href="#about">Cluster</a></li>
-						<li><a href="#contact">Configuration</a></li>
-					</ul>
+	<head>
+		<meta charset="utf-8">
+		<title>cbfs - admin</title>
+		<meta name="viewport" content="width=device-width, initial-scale=1.0">
+		<link href="css/bootstrap.css" rel="stylesheet">
+		<style type="text/css">
+			body {
+				padding-top: 60px;
+				padding-bottom: 40px;
+			}
+			.sidebar-nav {
+				padding: 9px 0;
+			}
+			@media (max-width: 980px) {
+				/* Enable use of floated navbar text */
+				.navbar-text.pull-right {
+					float: none;
+					padding-left: 5px;
+					padding-right: 5px;
+				}
+			}
+		</style>
+		<link href="css/bootstrap-responsive.css" rel="stylesheet">
+	</head>
+	<body>
+		<div class="navbar navbar-fixed-top">
+			<div class="navbar-inner">
+				<div class="container-fluid">
+					<button type="button" class="btn btn-navbar" data-toggle="collapse" data-target=".nav-collapse">
+						<span class="icon-bar"></span>
+						<span class="icon-bar"></span>
+						<span class="icon-bar"></span>
+					</button>
+					<span class="brand"><a href="http://github.com/couchbaselabs/cbfs">cbfs</a> - admin</span>
+					<div class="nav-collapse collapse">
+						<p class="navbar-text pull-right" id="cbfs-nodes"></p>
+						<ul class="nav">
+							<li class="active"><a href="#files">File Manager</a></li>
+						</ul>
+					</div> <!--/.nav-collapse -->
 				</div>
-				<!--/.nav-collapse -->
 			</div>
 		</div>
-	</div>
-
-	<div class="container-fluid">
-		<div class="row-fluid">
-			<div class="span3">
-				<div class="well sidebar-nav">
-					<div id="files"></div>
-				</div>
-				<!--/.well -->
-			</div>
-			<!--/span-->
-			<div class="span9">
-				<ul id="folderBreadcrumb" class="breadcrumb">
-					<li><a href="#">Home</a> <span class="divider">/</span></li>
-					<li><a href="#">Library</a> <span class="divider">/</span></li>
-					<li class="active">Data</li>
-				</ul>
-				<div class="btn-toolbar">
-					<div class="btn-group">
-						<button class="btn">
-							<i class="icon-upload"></i> Upload
-						</button>
-						<button class="btn" onclick="deleteSelectedItems()">
-							<i class="icon-trash"></i> Delete
-						</button>
-					</div>
-				</div>
-				<div id="flex" class="">
-					<table id="flexfiles" class="flexme1">
-
-					</table>
-				</div>
-			</div>
-			<!--/span-->
+		<div class="container-fluid" id="container">
+			<noscript>cbfs-admin requires JavaScript</noscript>
 		</div>
-		<!--/row-->
+		<!--/.fluid-container-->
 
-		<hr>
-
-		<footer>
-			<p>&copy; Couchbase 2012</p>
-		</footer>
-
-	</div>
-	<!--/.fluid-container-->
-
-	<script src="http://code.jquery.com/jquery-latest.js"></script>
-
-	<script type="text/javascript" src="js/jquery.cookie.js"></script>
-	<script type="text/javascript" src="js/jquery.hotkeys.js"></script>
-	<script type="text/javascript" src="js/jquery.jstree.js"></script>
-	<script type="text/javascript" src="js/bootstrap.js"></script>
-	<script type="text/javascript" src="js/flexigrid.pack.js"></script>
-	<script type="text/javascript" src="js/cbfs-browser.js"></script>
-
-	<!-- JavaScript neccessary for the tree -->
-	<script type="text/javascript" class="source below">
-        $(function() {
-            $("#files").bind("loaded.jstree", cbfs_browser_on_tree_ready);
-            $("#files").jstree(cbfs_browser_tree_configuration).bind(
-                "select_node.jstree", cbfs_browser_tree_node_selected);
-        });
-    </script>
-
-</body>
+		<script src="js/jquery.min.js"></script>
+		<script src="js/bootstrap.min.js"></script>
+		<script src="js/cbfs-admin.js"></script>
+	</body>
 </html>
