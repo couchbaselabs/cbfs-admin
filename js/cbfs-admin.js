@@ -103,6 +103,10 @@ function layout_files( path ) {
 				location.hash = '#files' + list.path + '/' + name;
 		} ).appendTo( $b );
 
+		$( '<a class="btn" title=".zip">' ).html( '<i class="icon-download"></i> <span class="btn-text">.zip</a>' ).attr( 'href', '/.cbfs/zip' + list.path ).appendTo( $b );
+
+		$( '<a class="btn" title=".tar.gz">' ).html( '<span class="btn-text">.tar.gz</a>' ).attr( 'href', '/.cbfs/tar' + list.path ).appendTo( $b ); // no icon because it's right next to .zip
+
 		if ( list.path != '' ) {
 			$t.append( $( '<tr>' )
 				.append( $( '<th>' )
