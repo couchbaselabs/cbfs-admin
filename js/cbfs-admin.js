@@ -64,6 +64,15 @@ function layout_files( path ) {
 				// Don't allow files uploaded in the same batch to override each other
 				var name = this.name;
 				var n = 0;
+
+				if ( !( name in usedNames ) && ( name in list.files ) ) {
+					if ( !confirm( 'Overwrite file "' + name + '"?' ) ) {
+						// Don't spam the question if the answer is no.
+						for ( var f in list.files ) {
+							usedNames[f] = true;
+						}
+					}
+				}
 				while ( name in usedNames ) {
 					n++;
 					name = this.name + '_' + n;
