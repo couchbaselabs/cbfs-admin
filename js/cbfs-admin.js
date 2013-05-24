@@ -62,7 +62,7 @@ function layout_files( path ) {
 			// reset the field so the same file can be uploaded again
 			this.value = '';
 		} ).css( { 'display': 'none' } ) ).click( function() {
-			this.firstElementChild.click();
+			this.lastElementChild.click();
 		} ).appendTo( $b );
 
 		if ( list.path != '' ) {
