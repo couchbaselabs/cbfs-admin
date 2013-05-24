@@ -37,9 +37,9 @@ function layout_files( path ) {
 
 	var layout = function( list ) {
 		list.path = list.path.replace( /\/$/, '' );
-		var $t = $( '<table>' ).addClass( 'table table-hover table-striped' ).appendTo( $( '#container' ).empty() );
-		var $b = $( '<div>' ).addClass( 'btn-toolbar' ).prependTo( '#container' );
-		var $p = $( '<ul>' ).addClass( 'breadcrumb' ).prependTo( '#container' ).html( '<li><a href="#files">root</a></li>' );
+		var $t = $( '<table class="table table-hover table-striped">' ).appendTo( $( '#container' ).empty() );
+		var $b = $( '<span class="btn-group">' ).appendTo( $( '<div class="btn-toolbar">' ).prependTo( '#container' ) );
+		var $p = $( '<ul class="breadcrumb">' ).html( '<li><a href="#files">root</a></li>' ).prependTo( '#container' );
 
 		var pathSoFar = '#files';
 		path.forEach( function( component ) {
@@ -49,31 +49,32 @@ function layout_files( path ) {
 				.appendTo( $p );
 		} );
 
-		$( '<span>' ).addClass( 'btn' ).html( '<i class="icon-upload"></i> Upload' ).append( $( '<input type="file" multiple>' ).change( function() {
+		$( '<span class="btn btn-primary" title="Upload">' ).html( '<i class="icon-upload icon-white"></i> <span class="btn-text">Upload</span>' ).append( $( '<input type="file" multiple>' ).change( function() {
 			$.each( this.files, function() {
 				// can't use jQuery here
 				var xhr = new XMLHttpRequest();
 				xhr.open( 'PUT', list.path + '/' + this.name, true );
-				xhr.onreadystatechange = function() {
-					// give it time to update the index
-					setTimeout(hash_changed, 1000);
-				};
 				xhr.send( this );
 			} );
 
 			// reset the field so the same file can be uploaded again
 			this.value = '';
-		} ).css( { 'display': 'none' } ) ).click( function() {
+		} ).hide() ).click( function() {
 			this.lastElementChild.click();
+		} ).appendTo( $b );
+
+		$( '<span class="btn" title="New Folder">' ).html( '<i class="icon-folder-open"></i> <span class="btn-text">New Folder</span>' ).click( function() {
+				location.hash = '#files' + list.path + '/' + prompt( 'Folder name?', 'New Folder' );
 		} ).appendTo( $b );
 
 		if ( list.path != '' ) {
 			$t.append( $( '<tr>' )
 				.append( $( '<th>' )
-					.append( $( '<i>' ).addClass( 'icon-folder-close' ) )
+					.append( $( '<i>' ).addClass( 'icon-folder-open' ) )
 					.append( ' ' )
 					.append( $( '<a>' ).attr( 'href', '#files' + list.path.replace( /\/[^\/]+$/, '' ) ).text( '..' ) ) )
 				.append( $( '<td>' ).text( 'parent directory' ) )
+				.append( $( '<td>' ) )
 				.append( $( '<td>' ) )
 				.append( $( '<td>' ) )
 			);
@@ -88,6 +89,7 @@ function layout_files( path ) {
 				.append( $( '<td>' ).text( dir.descendants + ( dir.descendants == 1 ? ' item' : ' items' ) ) )
 				.append( $( '<td>' ).text( pretty_bytes( dir.size ) ) )
 				.append( $( '<td>' ) )
+				.append( $( '<td>' ) )
 			);
 		}
 		for ( var f in list.files ) {
@@ -101,6 +103,17 @@ function layout_files( path ) {
 				.append( $( '<td>' ).text( file.ctype ) )
 				.append( $( '<td>' ).text( pretty_bytes( file.length ) ) )
 				.append( $( '<td>' ).text( d.toDateString() == new Date().toDateString() ? d.toLocaleTimeString() : d.toLocaleDateString() ) )
+				.append( $( '<td>' )
+					.append( $( '<button class="btn btn-danger btn-mini" title="Delete"><i class="icon-trash icon-white"></i></button>' ).click( ( function( f, file ) {
+						return function() {
+							if ( confirm( 'Permanently delete "' + list.path + '/' + f + '"?' ) ) {
+								$.ajax( {
+									'type': 'DELETE',
+									'url':  list.path + '/' + f
+								} );
+							}
+						};
+					} )( f, file ) ) ) )
 			);
 		}
 	};

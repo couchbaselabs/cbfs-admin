@@ -13,6 +13,11 @@
 			.sidebar-nav {
 				padding: 9px 0;
 			}
+			@media (max-width: 767px) {
+				.btn-toolbar > .btn-group > .btn > .btn-text {
+					display: none;
+				}
+			}
 			@media (max-width: 980px) {
 				/* Enable use of floated navbar text */
 				.navbar-text.pull-right {
@@ -47,7 +52,7 @@
 		<div class="container-fluid" id="container">
 			<noscript>cbfs-admin requires JavaScript</noscript>
 		</div>
-		<!--/.fluid-container-->
+		<!--/.container-fluid-->
 
 		<script src="js/jquery.js"></script>
 		<script src="js/bootstrap.js"></script>
