@@ -103,9 +103,9 @@ function layout_files( path ) {
 				location.hash = '#files' + list.path + '/' + name;
 		} ).appendTo( $b );
 
-		$( '<a class="btn" title=".zip">' ).html( '<i class="icon-download"></i> <span class="btn-text">.zip</a>' ).attr( 'href', '/.cbfs/zip' + list.path ).appendTo( $b );
+		$( '<a class="btn" title="Download .zip">' ).html( '<i class="icon-download"></i> <span class="btn-text">.zip</a>' ).attr( 'href', '/.cbfs/zip' + list.path ).appendTo( $b );
 
-		$( '<a class="btn" title=".tar.gz">' ).html( '<span class="btn-text">.tar.gz</a>' ).attr( 'href', '/.cbfs/tar' + list.path ).appendTo( $b ); // no icon because it's right next to .zip
+		$( '<a class="btn" title="Download .tar.gz">' ).html( '<span class="btn-text">.tar.gz</a>' ).attr( 'href', '/.cbfs/tar' + list.path ).appendTo( $b ); // no icon because it's right next to .zip
 
 		if ( list.path != '' ) {
 			$t.append( $( '<tr>' )
@@ -200,7 +200,7 @@ function layout_control() {
 					.append( $( '<h3>' ).text( n ) )
 					.append( node.addr )
 					.append( '<dl>' + (
-						( node.hbage_ms < 300000 ) ?
+						( node.hbage_ms < 60000 ) ?
 						( '<dt>Up</dt><dd class="text-success">' + node.uptime_str + '</dd>' ) :
 						( '<dt>Down</dt><dd class="text-error">' + node.hbage_str + '</dd>' ) ) +
 						'<dt>Free</dt><dd>' + pretty_bytes( node.free ) + '</dd>' +
