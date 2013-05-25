@@ -66,7 +66,7 @@ function layout_files( path ) {
 				var n = 0;
 
 				if ( !( name in usedNames ) && ( name in list.files ) ) {
-					if ( !confirm( 'Overwrite file "' + name + '"?' ) ) {
+					if ( name == 'image.jpg' || !confirm( 'Overwrite file "' + name + '"?' ) ) {
 						// Don't spam the question if the answer is no.
 						for ( var f in list.files ) {
 							usedNames[f] = true;
