@@ -107,10 +107,18 @@ function layout_files( path ) {
 
 		$( '<a class="btn" title="Download .tar.gz">' ).html( '<span class="btn-text">.tar.gz</a>' ).attr( 'href', '/.cbfs/tar' + list.path ).appendTo( $b ); // no icon because it's right next to .zip
 
+		$( '<tr>' )
+			.append( $( '<th>' ).text( 'Name' ).prepend( '<i class="icon-dummy"></i> ' ) )
+			.append( $( '<th>' ).text( 'Content' ) )
+			.append( $( '<th>' ).text( 'Size' ) )
+			.append( $( '<th>' ).text( 'Modified' ) )
+			.append( $( '<th>' ).text( 'Actions' ) )
+			.appendTo( $( '<thead>' ).appendTo( $t ) );
+
 		if ( list.path != '' ) {
 			$t.append( $( '<tr>' )
 				.append( $( '<th>' )
-					.append( $( '<i>' ).addClass( 'icon-folder-open' ) )
+					.append( $( '<i>' ).addClass( 'icon-home' ) )
 					.append( ' ' )
 					.append( $( '<a>' ).attr( 'href', '#files' + list.path.replace( /\/[^\/]+$/, '' ) ).text( '..' ) ) )
 				.append( $( '<td>' ).text( 'parent directory' ) )
@@ -225,12 +233,15 @@ function layout_control() {
 }
 
 function hash_changed() {
-	// I might put something in here in the future.
+	var new_hash = location.hash.replace( /^#files\/\.cbfs(\/|$)/, '#files/cbfs$1' );
+	if ( location.hash != new_hash ) // assignment has side effects
+		location.hash = new_hash;
+
 	update();
 }
 
 function update() {
-	var components = location.hash.replace(/^#/, '').split(/\//g);
+	var components = location.hash.replace( /^#/, '' ).split( /\//g );
 	switch ( components[0] ) {
 	case 'files':
 		layout_files( components.slice( 1 ) );
