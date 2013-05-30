@@ -176,7 +176,7 @@ function updateFiles( force, path ) {
 
 			for ( var file in data.files ) {
 				var f = data.files[file];
-				addRow( data.path + '/' + file, 'file', file, f.ctype || 'unknown', f.length, prettyDate( f.modified ), $( '<td>' ).append( $( '<button class="btn btn-mini btn-danger"><i class="icon-trash"></i></button>' ).click( ( function( file ) {
+				addRow( data.path.replace( /\/+$/, '' ) + '/' + file, 'file', file, f.ctype || 'unknown', f.length, prettyDate( f.modified ), $( '<td>' ).append( $( '<button class="btn btn-mini btn-danger"><i class="icon-trash"></i></button>' ).click( ( function( file ) {
 					return function() {
 						if ( confirm( 'Permanently delete ' + file + '?' ) ) {
 							var xhr = new XMLHttpRequest();
