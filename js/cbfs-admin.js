@@ -113,7 +113,11 @@ function updateFiles( force, path ) {
 		} ).parent().click( function() {
 			$( this ).children( 'input[type="file"]' )[0].click();
 		} ).appendTo( btn_group_1 );
-		$( '<button class="btn"><i class="icon-folder-open"></i> New Folder</button>' ).appendTo( btn_group_1 );
+		$( '<button class="btn"><i class="icon-folder-open"></i> New Folder</button>' ).click( function() {
+			var name = prompt( 'Folder name?', 'New Folder' );
+			if ( name != null && name.length > 0 )
+				location.hash = '#files/' + path.concat( [name] ).join( '/' );
+		} ).appendTo( btn_group_1 );
 		var btn_group_2 = $( '<div class="btn-group">' ).appendTo( toolbar );
 		$( '<a class="btn"><i class="icon-download"></i> .zip</a>' ).attr( 'href', '/.cbfs/zip/' + path.join( '/' ) ).appendTo( btn_group_2 );
 		$( '<a class="btn"><i class="icon-download-alt"></i> .tar.gz</a>' ).attr( 'href', '/.cbfs/tar/' + path.join( '/' ) ).appendTo( btn_group_2 );
@@ -169,7 +173,17 @@ function updateFiles( force, path ) {
 
 			for ( var file in data.files ) {
 				var f = data.files[file];
-				addRow( data.path + '/' + file, 'file', file, f.ctype || 'unknown', f.length, prettyDate( new Date( f.modified ) ), $( '<td>' ) );
+				addRow( data.path + '/' + file, 'file', file, f.ctype || 'unknown', f.length, prettyDate( new Date( f.modified ) ), $( '<td>' ).append( $( '<button class="btn btn-mini btn-danger"><i class="icon-trash"></i></button>' ).click( ( function( file ) {
+					return function() {
+						if ( confirm( 'Permanently delete ' + file + '?' ) ) {
+							var xhr = new XMLHttpRequest();
+							xhr.open( 'DELETE', data.path + '/' + file, false ); // synchronous request
+							xhr.setRequestHeader( 'If-Match', '"' + f.oid + '"' );
+							xhr.send( null );
+							update( false );
+						}
+					};
+				} )( file ) ) ) );
 			}
 		},
 		error: function( _, status ) {
