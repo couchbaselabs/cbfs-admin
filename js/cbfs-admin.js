@@ -100,7 +100,7 @@ function updateFiles( force, path ) {
 
 		var breadcrumb = $( '<ul class="breadcrumb">' );
 		var pathSoFar = '#files';
-		$( '<li><span class="divider">/</span></li>' ).append( $( '<a>' ).text( 'root' ).attr( 'href', pathSoFar ) ).appendTo( breadcrumb );
+		breadcrumb.append( '<li><a href="#files" class="muted">root</a></li>' );
 		$.each( path, function() {
 			pathSoFar += '/' + this;
 			$( '<li><span class="divider">/</span></li>' ).append( $( '<a>' ).text( this ).attr( 'href', pathSoFar ) ).appendTo( breadcrumb );
