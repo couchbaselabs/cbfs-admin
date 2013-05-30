@@ -56,7 +56,7 @@ function layout_files( path ) {
 				.appendTo( $p );
 		} );
 
-		$( '<span class="btn btn-primary" title="Upload">' ).html( '<i class="icon-upload icon-white"></i> <span class="btn-text">Upload</span>' ).append( $( '<input type="file" multiple>' ).change( function() {
+		$( '<span class="btn btn-primary" title="Upload">' ).html( '<i class="icon-upload icon-white"></i> Upload' ).append( $( '<input type="file" multiple>' ).change( function() {
 			var usedNames = {};
 			$.each( this.files, function() {
 				// can't use jQuery here
@@ -97,15 +97,15 @@ function layout_files( path ) {
 			this.lastElementChild.click();
 		} ).appendTo( $b );
 
-		$( '<span class="btn" title="New Folder">' ).html( '<i class="icon-folder-open"></i> <span class="btn-text">New Folder</span>' ).click( function() {
+		$( '<span class="btn" title="New Folder">' ).html( '<i class="icon-folder-open"></i> New Folder' ).click( function() {
 			var name = prompt( 'Folder name?', 'New Folder' );
 			if ( name !== null )
 				location.hash = '#files' + list.path + '/' + name;
 		} ).appendTo( $b );
 
-		$( '<a class="btn" title="Download .zip">' ).html( '<i class="icon-download"></i> <span class="btn-text">.zip</a>' ).attr( 'href', '/.cbfs/zip' + list.path ).appendTo( $b );
+		$( '<a class="btn" title="Download .zip">' ).html( '<i class="icon-download"></i> .zip' ).attr( 'href', '/.cbfs/zip' + list.path ).appendTo( $b );
 
-		$( '<a class="btn" title="Download .tar.gz">' ).html( '<span class="btn-text">.tar.gz</a>' ).attr( 'href', '/.cbfs/tar' + list.path ).appendTo( $b ); // no icon because it's right next to .zip
+		$( '<a class="btn" title="Download .tar.gz">' ).html( '.tar.gz' ).attr( 'href', '/.cbfs/tar' + list.path ).appendTo( $b ); // no icon because it's right next to .zip
 
 		$( '<tr>' )
 			.append( $( '<th>' ).text( 'Name' ).prepend( '<i class="icon-dummy"></i> ' ) )
@@ -118,7 +118,7 @@ function layout_files( path ) {
 		if ( list.path != '' ) {
 			$t.append( $( '<tr>' )
 				.append( $( '<th>' )
-					.append( $( '<i>' ).addClass( 'icon-home' ) )
+					.append( $( '<i>' ).addClass( 'icon-level-up' ) )
 					.append( ' ' )
 					.append( $( '<a>' ).attr( 'href', '#files' + list.path.replace( /\/[^\/]+$/, '' ) ).text( '..' ) ) )
 				.append( $( '<td>' ).text( 'parent directory' ) )
@@ -152,7 +152,7 @@ function layout_files( path ) {
 				.append( $( '<td>' ).text( pretty_bytes( file.length ) ) )
 				.append( $( '<td>' ).text( d.toDateString() == new Date().toDateString() ? d.toLocaleTimeString() : d.toLocaleDateString() ) )
 				.append( $( '<td>' )
-					.append( $( '<button class="btn btn-danger btn-mini" title="Delete"><i class="icon-trash icon-white"></i></button>' ).click( ( function( f, file ) {
+					.append( $( '<button class="btn btn-danger btn-mini" title="Delete"><i class="icon-trash"></i></button>' ).click( ( function( f, file ) {
 						return function() {
 							if ( confirm( 'Permanently delete "' + list.path + '/' + f + '"?' ) ) {
 								$.ajax( {
