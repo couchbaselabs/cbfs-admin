@@ -1,4 +1,198 @@
-function pretty_bytes( bytes ) {
+var currentRequest = null;
+var lastFileRequest = '';
+var lastMode = '';
+var uploadFiles = null;
+
+function update( force ) {
+	var hash = location.hash.replace( /^#/, '' ).split( /\/+/g );
+	switch ( hash[0] ) {
+	case 'files':
+		updateFiles( force, hash.slice( 1 ) );
+		break;
+
+	case 'control':
+		updateControl( force, hash.slice( 1 ) );
+		break;
+
+	default:
+		location.hash = 'files';
+	}
+}
+window.addEventListener( 'hashchange', function() {
+	update( true );
+}, false );
+document.body.addEventListener( 'dragenter', function( e ) {
+	e.preventDefault();
+	e.dataTransfer.dropEffect = 'copy';
+	return false;
+}, false );
+document.body.addEventListener( 'dragover', function( e ) {
+	e.preventDefault();
+	e.dataTransfer.dropEffect = 'copy';
+	return false;
+}, false );
+document.body.addEventListener( 'drop', function( e ) {
+	if ( lastMode == 'files' ) {
+		e.preventDefault();
+		uploadFiles( e.dataTransfer.files );
+		return false;
+	}
+}, false );
+setInterval( update, 1000, false );
+
+function upload( path, file, overwrite, original, tries ) {
+	if ( !original && file.name == 'image.jpg' ) {
+		// iOS Safari has problems with a prompt() during an event handler. Also, all files are named image.jpg, which sucks.
+		original = file.name;
+		tries = -1;
+	}
+	var bar = $( '<div class="bar">' ).appendTo( $( '<div class="progress">' ).appendTo( '#progress-bars' ) );
+	var xhr = new XMLHttpRequest();
+	xhr.open( 'PUT', path );
+	if ( !overwrite ) {
+		xhr.setRequestHeader( 'If-None-Match', '*' );
+	}
+	xhr.upload.onprogress = function( e ) {
+		bar.css( 'width', ( e.position / e.total * 100 ) + '%' );
+	};
+	xhr.onload = function( e ) {
+		switch ( xhr.status ) {
+		case 201: // created
+			update( false );
+			bar.addClass( 'bar-success' ).parent().fadeOut( 'normal', function() {
+				$( this ).remove();
+			} );
+			break;
+
+		case 412: // precondition failed
+			bar.addClass( 'bar-danger' );
+			if ( original ) {
+				tries++;
+				upload( original + '_' + tries, file, overwrite, original, tries );
+			} else if ( confirm( file.name + ' already exists. Overwrite?' ) ) {
+				upload( path, file, true, path, 0 );
+			} else {
+				upload( path + '_0', file, false, path, 0 );
+			}
+			bar.parent().remove();
+			break;
+
+		default:
+			console.log( 'load?', path, e );
+		}
+	};
+	xhr.send( file );
+}
+
+function updateFiles( force, path ) {
+	if ( lastMode != 'files' ) {
+		lastMode = 'files';
+		force = true;
+	}
+
+	if ( force ) {
+		uploadFiles = function( files ) {
+			$.each( files, function() {
+				upload( '/' + path.join( '/' ) + '/' + this.name, this );
+			} );
+		};
+
+		var breadcrumb = $( '<ul class="breadcrumb">' );
+		var pathSoFar = '#files';
+		$( '<li><span class="divider">/</span></li>' ).append( $( '<a>' ).text( 'root' ).attr( 'href', pathSoFar ) ).appendTo( breadcrumb );
+		$.each( path, function() {
+			pathSoFar += '/' + this;
+			$( '<li><span class="divider">/</span></li>' ).append( $( '<a>' ).text( this ).attr( 'href', pathSoFar ) ).appendTo( breadcrumb );
+		} );
+
+		var toolbar = $( '<div class="btn-toolbar">' );
+		var btn_group_1 = $( '<div class="btn-group">' ).appendTo( toolbar );
+		$( '<button class="btn btn-primary"><input type="file" multiple><i class="icon-upload"></i> Upload</button>' ).children( 'input[type="file"]' ).hide().change( function() {
+			uploadFiles( this.files );
+			this.value = ''; // clear so the next upload can be the same files
+		} ).parent().click( function() {
+			$( this ).children( 'input[type="file"]' )[0].click();
+		} ).appendTo( btn_group_1 );
+		$( '<button class="btn"><i class="icon-folder-open"></i> New Folder</button>' ).appendTo( btn_group_1 );
+		var btn_group_2 = $( '<div class="btn-group">' ).appendTo( toolbar );
+		$( '<a class="btn"><i class="icon-download"></i> .zip</a>' ).attr( 'href', '/.cbfs/zip/' + path.join( '/' ) ).appendTo( btn_group_2 );
+		$( '<a class="btn"><i class="icon-download-alt"></i> .tar.gz</a>' ).attr( 'href', '/.cbfs/tar/' + path.join( '/' ) ).appendTo( btn_group_2 );
+
+		var filetable = $( '<table class="table table-striped table-hover">' );
+		filetable.html( '<thead><tr><th>Name</th><th>Content</th><th>Size</th><th>Modified</th><th></th></tr></thead><tbody id="filetable"></tbody>' );
+
+		$( '#container' ).empty().append( breadcrumb ).append( toolbar ).append( filetable );
+	}
+
+	if ( currentRequest ) {
+		if ( force ) {
+			currentRequest.abort();
+		} else {
+			return;
+		}
+	}
+
+	currentRequest = $.ajax( {
+		type: 'GET',
+		url: '/.cbfs/list/' + path.join( '/' ),
+		data: { includeMeta: true },
+		dataType: 'json',
+
+		success: function( data ) {
+			currentRequest = null;
+
+			var dataString = JSON.stringify( data );
+			if ( dataString == lastFileRequest )
+				return;
+			lastFileRequest = dataString;
+
+			var filetable = $( '#filetable' ).empty();
+
+			var addRow = function( filepath, icon, name, content, size, modified, actions ) {
+				var row = $( '<tr>' );
+				$( '<th>' ).append( $( '<i>' ).addClass( 'muted icon-' + icon ) ).append( ' ' ).append( $( '<a>' ).attr( 'href', '#files/' + filepath.replace( /^\/+/, '' ) ).text( name ) ).appendTo( row );
+				$( '<td>' ).text( content ).appendTo( row );
+				$( '<td>' ).text( prettyBytes( size ) ).appendTo( row );
+				$( '<td>' ).text( modified ).appendTo( row );
+				if ( actions ) {
+					actions.appendTo( row );
+				} else {
+					$( '<td>' ).appendTo( row );
+				}
+				row.appendTo( filetable );
+			};
+
+			for ( var dir in data.dirs ) {
+				var d = data.dirs[dir];
+				addRow( data.path + '/' + dir, 'folder-close', dir, d.descendants + ( d.descendants == 1 ? ' file' : ' files' ), d.size, '', null );
+			}
+
+			for ( var file in data.files ) {
+				var f = data.files[file];
+				addRow( data.path + '/' + file, 'file', file, f.ctype || 'unknown', f.length, prettyDate( new Date( f.modified ) ), $( '<td>' ) );
+			}
+		},
+		error: function( _, status ) {
+			currentRequest = null;
+
+			// only clear on 404 (empty folder)
+			if ( status != 'error' )
+				return;
+
+			if ( '' == lastFileRequest )
+				return;
+			lastFileRequest = '';
+
+			$( '#filetable' ).empty();
+		}
+	} );
+}
+
+function updateControl( force, path ) {
+	
+}
+
+function prettyBytes( bytes ) {
 	if ( bytes < 1024 ) {
 		return bytes + ' bytes';
 	}
@@ -30,233 +224,9 @@ function pretty_bytes( bytes ) {
 	return bytes + 'YB';
 }
 
-var last_data = '';
-
-function layout_files( path ) {
-	$( '.nav li' ).removeClass( 'active' ).filter( '[data-tab="files"]' ).addClass( 'active' );
-
-	path = path.filter( function ( p ) { return p; } );
-
-	var layout = function( list ) {
-		var data = JSON.stringify( list );
-		if ( data == last_data )
-			return;
-		last_data = data;
-
-		list.path = list.path.replace( /\/$/, '' );
-		var $t = $( '<table class="table table-hover table-striped">' ).appendTo( $( '#container' ).empty() );
-		var $b = $( '<span class="btn-group">' ).appendTo( $( '<div class="btn-toolbar">' ).prependTo( '#container' ) );
-		var $p = $( '<ul class="breadcrumb">' ).html( '<li><a href="#files">root</a></li>' ).prependTo( '#container' );
-
-		var pathSoFar = '#files';
-		path.forEach( function( component ) {
-			$( '<li><span></span><a></a></li>' )
-				.children( 'a' ).attr( 'href', pathSoFar += '/' + component ).text( component ).parent()
-				.children( 'span' ).addClass( 'divider' ).text( '/' ).parent()
-				.appendTo( $p );
-		} );
-
-		$( '<span class="btn btn-primary" title="Upload">' ).html( '<i class="icon-upload icon-white"></i> Upload' ).append( $( '<input type="file" multiple>' ).change( function() {
-			var usedNames = {};
-			$.each( this.files, function() {
-				// can't use jQuery here
-				var xhr = new XMLHttpRequest();
-				// Don't allow files uploaded in the same batch to override each other
-				var name = this.name;
-				var n = 0;
-
-				if ( !( name in usedNames ) && ( name in list.files ) ) {
-					if ( name == 'image.jpg' || !confirm( 'Overwrite file "' + name + '"?' ) ) {
-						// Don't spam the question if the answer is no.
-						for ( var f in list.files ) {
-							usedNames[f] = true;
-						}
-					}
-				}
-				while ( name in usedNames ) {
-					n++;
-					name = this.name + '_' + n;
-					if ( !( name in usedNames ) && ( name in list.files ) ) {
-						if ( !confirm( 'Overwrite file "' + name + '"?' ) ) {
-							// Don't spam the question if the answer is no.
-							for ( var f in list.files ) {
-								usedNames[f] = true;
-							}
-						}
-					}
-				}
-				usedNames[name] = true;
-				xhr.open( 'PUT', list.path + '/' + name, true );
-				xhr.onreadystatechange = update;
-				xhr.send( this );
-			} );
-
-			// reset the field so the same file can be uploaded again
-			this.value = '';
-		} ).hide() ).click( function() {
-			this.lastElementChild.click();
-		} ).appendTo( $b );
-
-		$( '<span class="btn" title="New Folder">' ).html( '<i class="icon-folder-open"></i> New Folder' ).click( function() {
-			var name = prompt( 'Folder name?', 'New Folder' );
-			if ( name !== null )
-				location.hash = '#files' + list.path + '/' + name;
-		} ).appendTo( $b );
-
-		$( '<a class="btn" title="Download .zip">' ).html( '<i class="icon-download"></i> .zip' ).attr( 'href', '/.cbfs/zip' + list.path ).appendTo( $b );
-
-		$( '<a class="btn" title="Download .tar.gz">' ).html( '.tar.gz' ).attr( 'href', '/.cbfs/tar' + list.path ).appendTo( $b ); // no icon because it's right next to .zip
-
-		$( '<tr>' )
-			.append( $( '<th>' ).text( 'Name' ).prepend( '<i class="icon-dummy"></i> ' ) )
-			.append( $( '<th>' ).text( 'Content' ) )
-			.append( $( '<th>' ).text( 'Size' ) )
-			.append( $( '<th>' ).text( 'Modified' ) )
-			.append( $( '<th>' ).text( 'Actions' ) )
-			.appendTo( $( '<thead>' ).appendTo( $t ) );
-
-		if ( list.path != '' ) {
-			$t.append( $( '<tr>' )
-				.append( $( '<th>' )
-					.append( $( '<i>' ).addClass( 'icon-level-up' ) )
-					.append( ' ' )
-					.append( $( '<a>' ).attr( 'href', '#files' + list.path.replace( /\/[^\/]+$/, '' ) ).text( '..' ) ) )
-				.append( $( '<td>' ).text( 'parent directory' ) )
-				.append( $( '<td>' ) )
-				.append( $( '<td>' ) )
-				.append( $( '<td>' ) )
-			);
-		}
-		for ( var d in list.dirs ) {
-			var dir = list.dirs[d];
-			$t.append( $( '<tr>' )
-				.append( $( '<th>' )
-					.append( $( '<i>' ).addClass( 'icon-folder-open' ) )
-					.append( ' ' )
-					.append( $( '<a>' ).attr( 'href', '#files' + list.path + '/' + d ).text( d ) ) )
-				.append( $( '<td>' ).text( dir.descendants + ( dir.descendants == 1 ? ' item' : ' items' ) ) )
-				.append( $( '<td>' ).text( pretty_bytes( dir.size ) ) )
-				.append( $( '<td>' ) )
-				.append( $( '<td>' ) )
-			);
-		}
-		for ( var f in list.files ) {
-			var file = list.files[f];
-			var d = new Date( file.modified );
-			$t.append( $( '<tr>' )
-				.append( $( '<th>' )
-					.append( $( '<i>' ).addClass( 'icon-file' ) )
-					.append( ' ' )
-					.append( $( '<a>' ).attr( 'href', list.path + '/' + f.replace( /^index\.html$/, '' ) ).text( f ) ) )
-				.append( $( '<td>' ).text( file.ctype ) )
-				.append( $( '<td>' ).text( pretty_bytes( file.length ) ) )
-				.append( $( '<td>' ).text( d.toDateString() == new Date().toDateString() ? d.toLocaleTimeString() : d.toLocaleDateString() ) )
-				.append( $( '<td>' )
-					.append( $( '<button class="btn btn-danger btn-mini" title="Delete"><i class="icon-trash"></i></button>' ).click( ( function( f, file ) {
-						return function() {
-							if ( confirm( 'Permanently delete "' + list.path + '/' + f + '"?' ) ) {
-								$.ajax( {
-									'type': 'DELETE',
-									'url':  list.path + '/' + f,
-									'success': update,
-									'error': update,
-								} );
-							}
-						};
-					} )( f, file ) ) ) )
-			);
-		}
-	};
-
-	$.ajax( {
-		'type':     'GET',
-		'url':      '/.cbfs/list/' + path.join( '/' ),
-		'data':     { 'includeMeta': 'true' },
-		'success':  layout,
-		'error':    function() {
-			layout( {
-				path:  '/' + path.join( '/' ),
-				dirs:  {},
-				files: {}
-			} );
-		},
-		'dataType': 'json',
-	} );
-}
-
-function layout_control() {
-	$( '.nav li' ).removeClass( 'active' ).filter( '[data-tab="control"]' ).addClass( 'active' );
-
-	var nodes, tasks, ready = 0;
-
-	var maybe = function() {
-		if ( ready == 2 ) { // must be the number of requests below
-			var data = JSON.stringify( { nodes: nodes, tasks: tasks } );
-			if ( data == last_data )
-				return;
-			last_data = data;
-
-			$( '#container' ).empty();
-			var $row, i = 0;
-			for ( var n in nodes ) {
-				var node = nodes[n];
-				if ( i % 3 == 0 ) {
-					$row = $( '<div class="row-fluid">' ).appendTo( '#container' );
-				}
-				i++;
-				$( '<div class="span4">' )
-					.append( $( '<h3>' ).text( n ) )
-					.append( node.addr )
-					.append( '<dl>' + (
-						( node.hbage_ms < 60000 ) ?
-						( '<dt>Up</dt><dd class="text-success">' + node.uptime_str + '</dd>' ) :
-						( '<dt>Down</dt><dd class="text-error">' + node.hbage_str + '</dd>' ) ) +
-						'<dt>Free</dt><dd>' + pretty_bytes( node.free ) + '</dd>' +
-						'<dt>Used</dt><dd>' + pretty_bytes( node.used ) + '</dd>' +
-						'</dl>' )
-					.appendTo( $row );
-			}
-			console.log(nodes, tasks);
-		}
-	};
-
-	$.getJSON( '/.cbfs/nodes/', function( data ) {
-		nodes = data;
-		ready++;
-		maybe();
-	} )
-	$.getJSON( '/.cbfs/tasks/', function( data ) {
-		tasks = data;
-		ready++;
-		maybe();
-	} );
-}
-
-function hash_changed() {
-	var new_hash = location.hash.replace( /^#files\/\.cbfs(\/|$)/, '#files/cbfs$1' );
-	if ( location.hash != new_hash ) // assignment has side effects
-		location.hash = new_hash;
-
-	update();
-}
-
-function update() {
-	var components = location.hash.replace( /^#/, '' ).split( /\//g );
-	switch ( components[0] ) {
-	case 'files':
-		layout_files( components.slice( 1 ) );
-		break;
-
-	case 'control':
-		layout_control();
-		break;
-
-	default:
-		location.hash = '#files';
+function prettyDate( d ) {
+	if ( d.toDateString() == new Date().toDateString() ) {
+		return d.toLocaleTimeString();
 	}
-};
-
-$( window ).on( 'hashchange', hash_changed );
-$( '.nav a' ).click( hash_changed );
-hash_changed();
-setInterval( update, 1000 );
+	return d.toLocaleDateString();
+}

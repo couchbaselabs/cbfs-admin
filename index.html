@@ -6,6 +6,18 @@
 		<meta name="viewport" content="width=device-width, initial-scale=1.0">
 		<link href="css/bootstrap.css" rel="stylesheet">
 		<style type="text/css">
+			#progress-bars {
+				position: fixed;
+				padding: 10px 20px;
+				bottom: 0;
+				left: 0;
+				right: 0;
+				opacity: 0.75;
+				pointer-events: none;
+			}
+			#progress-bars .progress {
+				margin-bottom: 5px;
+			}
 			body {
 				padding-top: 60px;
 				padding-bottom: 40px;
@@ -36,7 +48,7 @@
 		<div class="container-fluid" id="container">
 			<noscript>cbfs-admin requires JavaScript</noscript>
 		</div>
-		<!--/.container-fluid-->
+		<div id="progress-bars"></div>
 
 		<script src="js/jquery.js"></script>
 		<script src="js/bootstrap.js"></script>
