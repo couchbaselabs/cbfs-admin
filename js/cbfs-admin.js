@@ -88,6 +88,7 @@ function updateFiles( force, path ) {
 	if ( lastMode != 'files' ) {
 		lastMode = 'files';
 		force = true;
+		$( '[data-tab]' ).removeClass( 'active' ).filter( '[data-tab="files"]' ).addClass( 'active' );
 	}
 
 	if ( force ) {
@@ -126,6 +127,8 @@ function updateFiles( force, path ) {
 		filetable.html( '<thead><tr><th>Name</th><th>Content</th><th>Size</th><th>Modified</th><th></th></tr></thead><tbody id="filetable"></tbody>' );
 
 		$( '#container' ).empty().append( breadcrumb ).append( toolbar ).append( filetable );
+
+		lastFileRequest = '';
 	}
 
 	if ( currentRequest ) {
@@ -173,7 +176,7 @@ function updateFiles( force, path ) {
 
 			for ( var file in data.files ) {
 				var f = data.files[file];
-				addRow( data.path + '/' + file, 'file', file, f.ctype || 'unknown', f.length, prettyDate( new Date( f.modified ) ), $( '<td>' ).append( $( '<button class="btn btn-mini btn-danger"><i class="icon-trash"></i></button>' ).click( ( function( file ) {
+				addRow( data.path + '/' + file, 'file', file, f.ctype || 'unknown', f.length, prettyDate( f.modified ), $( '<td>' ).append( $( '<button class="btn btn-mini btn-danger"><i class="icon-trash"></i></button>' ).click( ( function( file ) {
 					return function() {
 						if ( confirm( 'Permanently delete ' + file + '?' ) ) {
 							var xhr = new XMLHttpRequest();
@@ -203,7 +206,59 @@ function updateFiles( force, path ) {
 }
 
 function updateControl( force, path ) {
-	
+	if ( lastMode != 'control' ) {
+		lastMode = 'control';
+		force = true;
+		$( '[data-tab]' ).removeClass( 'active' ).filter( '[data-tab="control"]' ).addClass( 'active' );
+	}
+
+	if ( currentRequest ) {
+		if ( force ) {
+			currentRequest.abort();
+		} else {
+			return;
+		}
+	}
+
+	if ( force ) {
+		$( '#container' ).empty();
+	}
+
+	currentRequest = $.ajax( {
+		type: 'GET',
+		url: '/.cbfs/nodes/',
+		data: {},
+		dataType: 'json',
+
+		success: function( data ) {
+			currentRequest = null;
+
+			var i = 0;
+			var row;
+			var container = $( '#container' ).empty();
+
+			for ( var node in data ) {
+				if ( i % 3 == 0 ) {
+					row = $( '<div class="row">' ).appendTo( container );
+				}
+				i++;
+				var n = data[node];
+
+				var box = $( '<div class="span4">' )
+					.append( $( '<h3>' ).text( node ) )
+					.append( $( '<address>' ).text( n.addr ) );
+
+				if ( n.free || n.used )
+					box.append( $( '<div class="progress"><div class="bar"></div></div>' ).children().css( 'width', ( n.used / ( n.free + n.used ) * 100 ) + '%' ).parent().attr( 'title', 'Used: ' + prettyBytes( n.used ) + '\nFree: ' + prettyBytes( n.free ) ) );
+
+				box.append( '<strong>heartbeat</strong> ' + prettyDate( n.hbtime ) + '<br>(' + prettyDuration( n.hbage_ms ) + ')<br><strong>started</strong> ' + prettyDate( n.starttime ) + '<br>(' + prettyDuration( n.uptime_ms ) + ')' )
+					.appendTo( row );
+			}
+		},
+		error: function( _, status ) {
+			currentRequest = null;
+		}
+	} );
 }
 
 function prettyBytes( bytes ) {
@@ -238,7 +293,41 @@ function prettyBytes( bytes ) {
 	return bytes + 'YB';
 }
 
+function prettyDuration( d ) {
+	var p = function( d ) {
+		if ( d < 1000 ) {
+			return ['', 0];
+		}
+		d /= 1000;
+		if ( d < 90 ) {
+			return [Math.round( d ) + ' second' + ( Math.round( d ) == 1 ? '' : 's' ), 0];
+		}
+		d /= 60;
+		if ( d < 90 ) {
+			return [Math.round( d ) + ' minute' + ( Math.round( d ) == 1 ? '' : 's' ), ( d % 1 ) * 60];
+		}
+		d /= 60;
+		if ( d < 36 ) {
+			return [Math.round( d ) + ' hour' + ( Math.round( d ) == 1 ? '' : 's' ), ( d % 1 ) * 60 * 60];
+		}
+		d /= 24;
+		return [Math.round( d ) + ' day' + ( Math.round( d ) == 1 ? '' : 's' ), ( d % 1 ) * 60 * 60 * 24];
+	};
+
+	var pretty = p( d );
+	/*if ( pretty[1] ) {
+		var pretty2 = p( pretty[1] );
+		if ( pretty2[0] ) {
+			pretty[0] += ', ' + pretty2[0];
+		}
+	}*/
+	if ( !pretty[0] )
+		return 'just now';
+	return pretty[0] + ' ago';
+}
+
 function prettyDate( d ) {
+	d = new Date( d );
 	if ( d.toDateString() == new Date().toDateString() ) {
 		return d.toLocaleTimeString();
 	}
