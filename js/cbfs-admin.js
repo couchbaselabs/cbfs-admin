@@ -157,7 +157,7 @@ function updateFiles( force, path ) {
 
 			var addRow = function( filepath, icon, name, content, size, modified, actions ) {
 				var row = $( '<tr>' );
-				$( '<th>' ).append( $( '<i>' ).addClass( 'muted icon-' + icon ) ).append( ' ' ).append( $( '<a>' ).attr( 'href', '#files/' + filepath.replace( /^\/+/, '' ) ).text( name ) ).appendTo( row );
+				$( '<th>' ).append( $( '<i>' ).addClass( 'muted icon-' + icon ) ).append( ' ' ).append( $( '<a>' ).attr( 'href', filepath ).text( name ) ).appendTo( row );
 				$( '<td>' ).text( content ).appendTo( row );
 				$( '<td>' ).text( prettyBytes( size ) ).appendTo( row );
 				$( '<td>' ).text( modified ).appendTo( row );
@@ -171,7 +171,7 @@ function updateFiles( force, path ) {
 
 			for ( var dir in data.dirs ) {
 				var d = data.dirs[dir];
-				addRow( data.path + '/' + dir, 'folder-close', dir, d.descendants + ( d.descendants == 1 ? ' file' : ' files' ), d.size, '', null );
+				addRow( '#files' + data.path.replace( /\/+$/, '' ) + '/' + dir, 'folder-close', dir, d.descendants + ( d.descendants == 1 ? ' file' : ' files' ), d.size, '', null );
 			}
 
 			for ( var file in data.files ) {
