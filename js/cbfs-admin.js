@@ -160,8 +160,7 @@ function updateFiles( force, path ) {
 				return function() {
 					if ( confirm( 'Permanently delete ' + file + '?' ) ) {
 						var xhr = new XMLHttpRequest();
-						xhr.open( 'DELETE', data.path + '/' + file, false ); // synchronous request
-						xhr.setRequestHeader( 'If-Match', '"' + f.oid + '"' );
+						xhr.open( 'DELETE', data.path.replace( /\/+$/, '' ) + '/' + file, false ); // synchronous request
 						xhr.send( null );
 						update( false );
 					}
