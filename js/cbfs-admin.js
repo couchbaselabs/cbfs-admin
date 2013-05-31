@@ -39,6 +39,7 @@ document.body.addEventListener( 'drop', function( e ) {
 	}
 }, false );
 setInterval( update, 1000, false );
+update( true );
 
 function upload( path, file, overwrite, original, tries ) {
 	if ( !original && file.name == 'image.jpg' ) {
@@ -131,6 +132,49 @@ function updateFiles( force, path ) {
 		lastFileRequest = '';
 	}
 
+	var display = function( data ) {
+		var filetable = $( '#filetable' ).empty();
+
+		var addRow = function( filepath, icon, name, content, size, modified, actions ) {
+			var row = $( '<tr>' );
+			$( '<th>' ).append( $( '<i>' ).addClass( 'muted icon-' + icon ) ).append( ' ' ).append( $( '<a>' ).attr( 'href', filepath ).text( name ) ).appendTo( row );
+			$( '<td>' ).text( content ).appendTo( row );
+			$( '<td>' ).text( prettyBytes( size ) ).appendTo( row );
+			$( '<td>' ).text( modified ).appendTo( row );
+			if ( actions ) {
+				actions.appendTo( row );
+			} else {
+				$( '<td>' ).appendTo( row );
+			}
+			row.appendTo( filetable );
+		};
+
+		for ( var dir in data.dirs ) {
+			var d = data.dirs[dir];
+			addRow( '#files' + data.path.replace( /\/+$/, '' ) + '/' + dir, 'folder-close', dir, d.descendants + ( d.descendants == 1 ? ' file' : ' files' ), d.size, '', null );
+		}
+
+		for ( var file in data.files ) {
+			var f = data.files[file];
+			addRow( data.path.replace( /\/+$/, '' ) + '/' + file, 'file', file, f.ctype || 'unknown', f.length, prettyDate( f.modified ), $( '<td>' ).append( $( '<button class="btn btn-mini btn-danger"><i class="icon-trash"></i></button>' ).click( ( function( file ) {
+				return function() {
+					if ( confirm( 'Permanently delete ' + file + '?' ) ) {
+						var xhr = new XMLHttpRequest();
+						xhr.open( 'DELETE', data.path + '/' + file, false ); // synchronous request
+						xhr.setRequestHeader( 'If-Match', '"' + f.oid + '"' );
+						xhr.send( null );
+						update( false );
+					}
+				};
+			} )( file ) ) ) );
+		}
+	};
+
+	if ( force && ( 'files/' + path.join( '/' ) ) in localStorage ) {
+		lastFileRequest = localStorage['files/' + path.join( '/' )];
+		display( JSON.parse( lastFileRequest ) );
+	}
+
 	if ( currentRequest ) {
 		if ( force ) {
 			currentRequest.abort();
@@ -152,42 +196,9 @@ function updateFiles( force, path ) {
 			if ( dataString == lastFileRequest )
 				return;
 			lastFileRequest = dataString;
+			localStorage['files' + data.path] = dataString;
 
-			var filetable = $( '#filetable' ).empty();
-
-			var addRow = function( filepath, icon, name, content, size, modified, actions ) {
-				var row = $( '<tr>' );
-				$( '<th>' ).append( $( '<i>' ).addClass( 'muted icon-' + icon ) ).append( ' ' ).append( $( '<a>' ).attr( 'href', filepath ).text( name ) ).appendTo( row );
-				$( '<td>' ).text( content ).appendTo( row );
-				$( '<td>' ).text( prettyBytes( size ) ).appendTo( row );
-				$( '<td>' ).text( modified ).appendTo( row );
-				if ( actions ) {
-					actions.appendTo( row );
-				} else {
-					$( '<td>' ).appendTo( row );
-				}
-				row.appendTo( filetable );
-			};
-
-			for ( var dir in data.dirs ) {
-				var d = data.dirs[dir];
-				addRow( '#files' + data.path.replace( /\/+$/, '' ) + '/' + dir, 'folder-close', dir, d.descendants + ( d.descendants == 1 ? ' file' : ' files' ), d.size, '', null );
-			}
-
-			for ( var file in data.files ) {
-				var f = data.files[file];
-				addRow( data.path.replace( /\/+$/, '' ) + '/' + file, 'file', file, f.ctype || 'unknown', f.length, prettyDate( f.modified ), $( '<td>' ).append( $( '<button class="btn btn-mini btn-danger"><i class="icon-trash"></i></button>' ).click( ( function( file ) {
-					return function() {
-						if ( confirm( 'Permanently delete ' + file + '?' ) ) {
-							var xhr = new XMLHttpRequest();
-							xhr.open( 'DELETE', data.path + '/' + file, false ); // synchronous request
-							xhr.setRequestHeader( 'If-Match', '"' + f.oid + '"' );
-							xhr.send( null );
-							update( false );
-						}
-					};
-				} )( file ) ) ) );
-			}
+			display( data );
 		},
 		error: function( _, status ) {
 			currentRequest = null;
@@ -199,6 +210,7 @@ function updateFiles( force, path ) {
 			if ( '' == lastFileRequest )
 				return;
 			lastFileRequest = '';
+			delete localStorage['files' + data.path];
 
 			$( '#filetable' ).empty();
 		}
@@ -224,6 +236,34 @@ function updateControl( force, path ) {
 		$( '#container' ).empty();
 	}
 
+	var display = function( data ) {
+		var i = 0;
+		var row;
+		var container = $( '#container' ).empty();
+
+		for ( var node in data ) {
+			if ( i % 3 == 0 ) {
+				row = $( '<div class="row">' ).appendTo( container );
+			}
+			i++;
+			var n = data[node];
+
+			var box = $( '<div class="span4">' )
+				.append( $( '<h3>' ).text( node ) )
+				.append( $( '<address>' ).text( n.addr ) );
+
+			if ( n.free || n.used )
+				box.append( $( '<div class="progress"><div class="bar"></div></div>' ).children().css( 'width', ( n.used / ( n.free + n.used ) * 100 ) + '%' ).parent().attr( 'title', 'Used: ' + prettyBytes( n.used ) + '\nFree: ' + prettyBytes( n.free ) ) );
+
+			box.append( '<strong>heartbeat</strong> ' + prettyDate( n.hbtime ) + '<br>(' + prettyDuration( n.hbage_ms ) + ')<br><strong>started</strong> ' + prettyDate( n.starttime ) + '<br>(' + prettyDuration( n.uptime_ms ) + ')' )
+				.appendTo( row );
+		}
+	};
+
+	if ( force && 'control' in localStorage ) {
+		display( JSON.parse( localStorage['control'] ) );
+	}
+
 	currentRequest = $.ajax( {
 		type: 'GET',
 		url: '/.cbfs/nodes/',
@@ -233,27 +273,8 @@ function updateControl( force, path ) {
 		success: function( data ) {
 			currentRequest = null;
 
-			var i = 0;
-			var row;
-			var container = $( '#container' ).empty();
-
-			for ( var node in data ) {
-				if ( i % 3 == 0 ) {
-					row = $( '<div class="row">' ).appendTo( container );
-				}
-				i++;
-				var n = data[node];
-
-				var box = $( '<div class="span4">' )
-					.append( $( '<h3>' ).text( node ) )
-					.append( $( '<address>' ).text( n.addr ) );
-
-				if ( n.free || n.used )
-					box.append( $( '<div class="progress"><div class="bar"></div></div>' ).children().css( 'width', ( n.used / ( n.free + n.used ) * 100 ) + '%' ).parent().attr( 'title', 'Used: ' + prettyBytes( n.used ) + '\nFree: ' + prettyBytes( n.free ) ) );
-
-				box.append( '<strong>heartbeat</strong> ' + prettyDate( n.hbtime ) + '<br>(' + prettyDuration( n.hbage_ms ) + ')<br><strong>started</strong> ' + prettyDate( n.starttime ) + '<br>(' + prettyDuration( n.uptime_ms ) + ')' )
-					.appendTo( row );
-			}
+			localStorage['control'] = JSON.stringify( data );
+			display( data );
 		},
 		error: function( _, status ) {
 			currentRequest = null;
