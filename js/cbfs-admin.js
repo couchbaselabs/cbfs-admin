@@ -44,7 +44,7 @@ update( true );
 function upload( path, file, overwrite, original, tries ) {
 	if ( !original && file.name == 'image.jpg' ) {
 		// iOS Safari has problems with a prompt() during an event handler. Also, all files are named image.jpg, which sucks.
-		original = file.name;
+		original = path;
 		tries = -1;
 	}
 	var bar = $( '<div class="bar">' ).appendTo( $( '<div class="progress">' ).appendTo( '#progress-bars' ) );
