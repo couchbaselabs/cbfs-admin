@@ -42,14 +42,17 @@ setInterval( update, 1000, false );
 update( true );
 
 function upload( path, file, overwrite, original, tries ) {
-	if ( !original && file.name == 'image.jpg' ) {
-		// iOS Safari has problems with a prompt() during an event handler. Also, all files are named image.jpg, which sucks.
-		original = path;
-		tries = -1;
-	}
 	var bar = $( '<div class="bar">' ).appendTo( $( '<div class="progress">' ).appendTo( '#progress-bars' ) );
 	var xhr = new XMLHttpRequest();
 	xhr.open( 'PUT', path );
+	if ( file.name == 'image.jpg' ) {
+		// iOS Safari has problems with a prompt() during an event handler. Also, all files are named image.jpg, which sucks.
+		if ( !original ) {
+			original = path;
+			tries = -1;
+		}
+		xhr.setRequestHeader( 'Content-Type', 'image/jpeg' );
+	}
 	if ( !overwrite ) {
 		xhr.setRequestHeader( 'If-None-Match', '*' );
 	}
