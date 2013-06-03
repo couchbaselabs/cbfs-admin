@@ -14,6 +14,10 @@ function update( force ) {
 		updateControl( force, hash.slice( 1 ) );
 		break;
 
+	case 'photos':
+		updatePhotos( force, hash.slice( 1 ) );
+		break;
+
 	default:
 		location.hash = 'files';
 	}
@@ -280,6 +284,131 @@ function updateControl( force, path ) {
 		},
 		error: function( _, status ) {
 			currentRequest = null;
+		}
+	} );
+}
+
+function updatePhotos( force, path ) {
+	if ( lastMode != 'photos' ) {
+		lastMode = 'photos';
+		force = true;
+		$( '[data-tab]' ).removeClass( 'active' ).filter( '[data-tab="photos"]' ).addClass( 'active' );
+	}
+
+	if ( !force ) { // don't refresh once it's loaded
+		return;
+	}
+
+	if ( currentRequest ) {
+		currentRequest.abort();
+	}
+
+	var display = function( photos ) {
+		var container = $( '<table class="table">' ).appendTo( $( '#container' ).empty() );
+
+		var randSeed = Math.floor( ( +new Date() ) / 86400000 ) % photos.length;
+		var rand = function() {
+			randSeed = ( 1103515245 * ( randSeed ) + 12345 ) % photos.length;
+			return randSeed;
+		};
+
+		for ( var i = 0; i < 100; i++ ) rand();
+
+		// shuffle
+		for ( var i = 0; i < photos.length; i++ ) {
+			var tmp = photos[i];
+			var j = rand();
+			photos[i] = photos[j];
+			photos[j] = tmp;
+		}
+
+		var used = [];
+		var rows = [];
+		var addRow = function() {
+			used.push( [false, false, false, false, false, false] );
+			rows.push( $( '<tr>' ).appendTo( container ) );
+		};
+
+		var start = parseInt( path[0], 10 );
+		if ( isNaN( start ) )
+			start = 0;
+		else
+			start *= 100;
+
+		if ( start + 100 <= photos.length ) {
+			container.after( $( '<button class="btn btn-large btn-block">Next</button>' ).click( function() {
+				window.scrollTo( 0, 0 );
+				location.hash = 'photos/' + ( start / 100 + 1 );
+			} ) )
+		}
+
+		for ( var i = start; i < Math.min( photos.length, start + 100 ); i++ ) {
+			var size = ( rand() % 4 ) + 1;
+			var x, y;
+			while ( true ) {
+photosY:
+				for ( y = 0; y < used.length; y++ ) {
+photosX:
+					for ( x = 0; x < 6; x++ ) {
+						for ( var _x = x; _x < x + size; _x++ ) {
+							for ( var _y = y; _y < y + size; _y++ ) {
+								if ( _y in used && _x in used[_y] && used[_y][_x] === false ) {
+									continue;
+								}
+								continue photosX;
+							}
+						}
+						break photosY;
+					}
+				}
+
+				if ( y == used.length )
+					addRow();
+				else
+					break;
+			}
+
+			for ( var _x = x; _x < x + size; _x++ ) {
+				for ( var _y = y; _y < y + size; _y++ ) {
+					used[_y][_x] = true;
+				}
+			}
+			used[y][x] = {src: photos[i], size: size};
+		}
+		for ( var y = 0; y < used.length; y++ ) {
+			for ( var x = 0; x < used[y].length; x++ ) {
+				var u = used[y][x];
+				if ( u === true ) {
+					continue;
+				}
+				if ( u === false ) {
+					rows[y].append( $( '<td>' ) );
+					continue;
+				}
+				rows[y].append( $( '<td>' ).attr( 'align', 'left' ).attr( 'valign', 'top' ).attr( 'rowspan', u.size ).attr( 'colspan', u.size ).append( $( '<a>' ).attr( 'href', u.src ).append( $( '<img>' ).attr( 'src', u.src ).attr( 'alt', '' ) ) ) );
+			}
+		}
+		container.append( $( '<tr><td><td><td><td><td><td>' ).children( 'td' ).css( 'width', (100 / 6) + '%' ).parent() );
+		container.find( 'td' ).css( 'border', 0 );
+	};
+
+	if ( 'photos' in localStorage ) {
+		display( JSON.parse( localStorage['photos'] ) );
+	}
+
+	currentRequest = $.getJSON( '/.cbfs/list/', { depth: 9999, includeMeta: true }, function( data ) {
+		currentRequest = null;
+
+		var photos = [];
+		for ( var file in data.files ) {
+			if ( data.files[file].ctype == 'image/jpeg' ) {
+				photos.push( '/' + file );
+			}
+		}
+		var dataString = JSON.stringify( photos );
+		if ( localStorage['photos'] != dataString ) {
+			localStorage['photos'] = dataString;
+			display( photos );
 		}
 	} );
 }
